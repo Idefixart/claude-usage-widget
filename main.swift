@@ -755,7 +755,7 @@ struct SettingsView: View {
 
 // MARK: - Desktop Widget Window
 
-class DesktopWidgetController {
+class DesktopWidgetController: NSObject, NSWindowDelegate {
     var window: NSWindow?
     let store: UsageStore
     var config: AppConfig
@@ -772,11 +772,13 @@ class DesktopWidgetController {
         w.contentView = hosting
         w.isOpaque = false
         w.backgroundColor = NSColor.clear
-        w.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)))
-        let beh: NSWindow.CollectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
-        w.collectionBehavior = beh
+        // Normal level so the window is clickable/draggable. Prior desktopIconWindow
+        // level rendered it behind the Finder desktop and ate all mouse events.
+        w.level = .normal
+        w.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         w.isMovableByWindowBackground = true
         w.hasShadow = false
+        w.delegate = self
         w.orderFront(nil as AnyObject?)
         self.window = w
     }
@@ -784,6 +786,14 @@ class DesktopWidgetController {
     func hide() { window?.orderOut(nil as AnyObject?); window = nil }
     func toggle() { if window != nil { hide() } else { show() } }
     var isVisible: Bool { window != nil }
+
+    // Persist new position whenever the user drags the widget.
+    func windowDidMove(_ notification: Notification) {
+        guard let w = window else { return }
+        config.widgetX = Double(w.frame.origin.x)
+        config.widgetY = Double(w.frame.origin.y)
+        config.save()
+    }
 }
 
 // MARK: - Menu Bar Controller
