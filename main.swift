@@ -25,6 +25,62 @@ extension Color {
     static let claudeOrange = Color(red: 204/255, green: 120/255, blue: 92/255)  // #CC785C
 }
 
+// MARK: - Localization
+
+enum Lang: String, CaseIterable, Identifiable {
+    case en, de, es
+    var id: String { rawValue }
+    var displayName: String {
+        switch self { case .en: return "English"; case .de: return "Deutsch"; case .es: return "Español" }
+    }
+    var localeIdentifier: String {
+        switch self { case .en: return "en_US"; case .de: return "de_DE"; case .es: return "es_ES" }
+    }
+}
+
+enum L10n {
+    static let strings: [String: [Lang: String]] = [
+        "section.session":        [.en: "Current Session",   .de: "Aktuelle Session",  .es: "Sesión actual"],
+        "section.week":           [.en: "Week",              .de: "Woche",             .es: "Semana"],
+        "section.extra":          [.en: "Extra Usage",       .de: "Extra Usage",       .es: "Uso adicional"],
+        "label.usage":            [.en: "Usage",             .de: "Verbrauch",         .es: "Uso"],
+        "label.all_models":       [.en: "All Models",        .de: "Alle Modelle",      .es: "Todos los modelos"],
+        "label.balance":          [.en: "Current Balance",   .de: "Aktuelles Guthaben",.es: "Saldo actual"],
+        "label.used":             [.en: "Used",              .de: "Verbraucht",        .es: "Usado"],
+        "label.monthly_limit":    [.en: "Monthly Limit",     .de: "Monatslimit",       .es: "Límite mensual"],
+        "label.updated":          [.en: "Updated: ",         .de: "Aktualisiert: ",    .es: "Actualizado: "],
+        "label.loading":          [.en: "Loading usage data...", .de: "Lade Usage-Daten...", .es: "Cargando datos..."],
+        "reset.in":               [.en: "Resets in %@",      .de: "Reset in %@",       .es: "Restablece en %@"],
+        "reset.at":               [.en: "Resets %@",         .de: "Reset %@",          .es: "Restablece %@"],
+        "time.now":               [.en: "now",               .de: "jetzt",             .es: "ahora"],
+        "time.day_short":         [.en: "d",                 .de: "T",                 .es: "d"],
+        "action.refresh":         [.en: "Refresh",           .de: "Aktualisieren",     .es: "Actualizar"],
+        "action.show_widget":     [.en: "Show Desktop Widget",   .de: "Desktop-Widget einblenden", .es: "Mostrar widget"],
+        "action.hide_widget":     [.en: "Hide Desktop Widget",   .de: "Desktop-Widget ausblenden", .es: "Ocultar widget"],
+        "action.settings":        [.en: "Settings...",       .de: "Einstellungen...",  .es: "Configuración..."],
+        "action.quit":            [.en: "Quit",              .de: "Beenden",           .es: "Salir"],
+        "settings.title":         [.en: "Settings",          .de: "Einstellungen",     .es: "Configuración"],
+        "settings.window_title":  [.en: "Claude Usage – Settings", .de: "Claude Usage – Einstellungen", .es: "Claude Usage – Configuración"],
+        "settings.interval":      [.en: "Refresh Interval",  .de: "Aktualisierungs-Intervall", .es: "Intervalo de actualización"],
+        "settings.min":           [.en: "min",               .de: "Min",               .es: "min"],
+        "settings.warn":          [.en: "Warning above",     .de: "Warnung ab",        .es: "Advertencia desde"],
+        "settings.warn_hint":     [.en: "Bars turn red when usage exceeds this value", .de: "Balken werden rot, wenn der Verbrauch diesen Wert überschreitet", .es: "Las barras se vuelven rojas cuando el uso supera este valor"],
+        "settings.autostart":     [.en: "Launch at login",   .de: "Beim Login automatisch starten", .es: "Abrir al iniciar sesión"],
+        "settings.autostart_hint":[.en: "Claude Usage opens at every system start", .de: "Claude Usage öffnet sich bei jedem Systemstart", .es: "Claude Usage se abre al iniciar el sistema"],
+        "settings.data_source":   [.en: "Data comes automatically from Claude Desktop", .de: "Daten kommen automatisch aus Claude Desktop", .es: "Los datos provienen automáticamente de Claude Desktop"],
+        "settings.save":          [.en: "Save",              .de: "Speichern",         .es: "Guardar"],
+        "settings.language":      [.en: "Language",          .de: "Sprache",           .es: "Idioma"],
+        "error.no_output":        [.en: "No output from script", .de: "Keine Ausgabe vom Script", .es: "Sin salida del script"],
+        "error.invalid_json":     [.en: "Invalid JSON response", .de: "Ungültige JSON-Antwort", .es: "Respuesta JSON inválida"],
+    ]
+
+    static func t(_ key: String, lang: Lang, _ args: CVarArg...) -> String {
+        let template = strings[key]?[lang] ?? strings[key]?[.en] ?? key
+        if args.isEmpty { return template }
+        return String(format: template.replacingOccurrences(of: "%@", with: "%@"), arguments: args)
+    }
+}
+
 // MARK: - Configuration
 
 struct AppConfig: Codable {
@@ -33,13 +89,15 @@ struct AppConfig: Codable {
     var widgetX: Double
     var widgetY: Double
     var warningPercent: Int  // Show warning at this usage %
+    var language: String = "en"  // "en" | "de" | "es"
 
     static let `default` = AppConfig(
         refreshInterval: 120,
         showDesktopWidget: true,
         widgetX: 40,
         widgetY: 40,
-        warningPercent: 80
+        warningPercent: 80,
+        language: "en"
     )
 
     static var configDir: String {
@@ -111,7 +169,16 @@ class UsageStore: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var hasData = false
-    var config = AppConfig.load()
+    @Published var language: Lang = .en
+    var config = AppConfig.load() {
+        didSet { language = Lang(rawValue: config.language) ?? .en }
+    }
+
+    func t(_ key: String, _ args: CVarArg...) -> String {
+        let template = L10n.strings[key]?[language] ?? L10n.strings[key]?[.en] ?? key
+        if args.isEmpty { return template }
+        return String(format: template, arguments: args)
+    }
 
     var menuBarDisplay: String {
         guard hasData else { return "◆ —" }
@@ -136,13 +203,14 @@ class UsageStore: ObservableObject {
     func timeUntilReset(_ bucket: UsageBucket) -> String {
         guard let d = bucket.resetsAt else { return "—" }
         let interval = d.timeIntervalSinceNow
-        if interval <= 0 { return "jetzt" }
+        if interval <= 0 { return t("time.now") }
         let h = Int(interval) / 3600
         let m = (Int(interval) % 3600) / 60
+        let dayUnit = t("time.day_short")
         if h > 24 {
             let days = h / 24
             let remH = h % 24
-            return "\(days)T \(remH)h"
+            return "\(days)\(dayUnit) \(remH)h"
         }
         if h > 0 { return "\(h)h \(m)m" }
         return "\(m) min"
@@ -151,8 +219,8 @@ class UsageStore: ObservableObject {
     func resetLabel(_ bucket: UsageBucket) -> String {
         guard let d = bucket.resetsAt else { return "" }
         let f = DateFormatter()
-        f.locale = Locale(identifier: "de_DE")
-        // Include date when reset is > 24h away so "Sa" is unambiguous
+        f.locale = Locale(identifier: language.localeIdentifier)
+        // Include date when reset is > 24h away so weekday alone isn't ambiguous
         let hoursAway = d.timeIntervalSinceNow / 3600
         f.dateFormat = hoursAway > 24 ? "EEE dd.MM HH:mm" : "EEE HH:mm"
         return f.string(from: d)
@@ -259,14 +327,14 @@ class UsageFetcher {
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             guard let output = String(data: data, encoding: .utf8), !output.isEmpty else {
                 completion(.failure(NSError(domain: "fetch", code: -1,
-                    userInfo: [NSLocalizedDescriptionKey: "Keine Ausgabe vom Script"])))
+                    userInfo: [NSLocalizedDescriptionKey: "error.no_output"])))
                 return
             }
 
             guard let jsonData = output.data(using: .utf8),
                   let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
                 completion(.failure(NSError(domain: "fetch", code: -2,
-                    userInfo: [NSLocalizedDescriptionKey: "Ungueltige JSON Antwort"])))
+                    userInfo: [NSLocalizedDescriptionKey: "error.invalid_json"])))
                 return
             }
 
@@ -397,7 +465,7 @@ struct WidgetContentView: View {
                     Spacer()
                     VStack(spacing: 8) {
                         ProgressView()
-                        Text("Lade Usage-Daten...")
+                        Text(store.t("label.loading"))
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
@@ -406,23 +474,23 @@ struct WidgetContentView: View {
                 }
             } else {
                 // Session (5-hour)
-                SectionLabel(icon: "bolt.fill", title: "Aktuelle Session")
+                SectionLabel(icon: "bolt.fill", title: store.t("section.session"))
                 UsageRow(
-                    title: "Verbrauch",
+                    title: store.t("label.usage"),
                     subtitle: "",
                     pct: store.session.utilization,
                     color: store.colorForUsage(store.session.utilization),
-                    resetInfo: "Reset in \(store.timeUntilReset(store.session))"
+                    resetInfo: store.t("reset.in", store.timeUntilReset(store.session))
                 )
 
                 // Weekly
-                SectionLabel(icon: "calendar", title: "Woche")
+                SectionLabel(icon: "calendar", title: store.t("section.week"))
                 UsageRow(
-                    title: "Alle Modelle",
-                    subtitle: "Reset \(store.resetLabel(store.weeklyAll))",
+                    title: store.t("label.all_models"),
+                    subtitle: store.t("reset.at", store.resetLabel(store.weeklyAll)),
                     pct: store.weeklyAll.utilization,
                     color: store.colorForUsage(store.weeklyAll.utilization),
-                    resetInfo: "Reset in \(store.timeUntilReset(store.weeklyAll))"
+                    resetInfo: store.t("reset.in", store.timeUntilReset(store.weeklyAll))
                 )
 
                 UsageRow(
@@ -446,22 +514,22 @@ struct WidgetContentView: View {
                 if let design = store.weeklyDesign {
                     UsageRow(
                         title: "Claude Design",
-                        subtitle: store.resetLabel(design).isEmpty ? "" : "Reset \(store.resetLabel(design))",
+                        subtitle: store.resetLabel(design).isEmpty ? "" : store.t("reset.at", store.resetLabel(design)),
                         pct: design.utilization,
                         color: store.colorForUsage(design.utilization),
-                        resetInfo: store.timeUntilReset(design) == "—" ? "" : "Reset in \(store.timeUntilReset(design))"
+                        resetInfo: store.timeUntilReset(design) == "—" ? "" : store.t("reset.in", store.timeUntilReset(design))
                     )
                 }
 
                 // Extra Usage
                 if store.extra.isEnabled {
-                    SectionLabel(icon: "creditcard", title: "Extra Usage")
+                    SectionLabel(icon: "creditcard", title: store.t("section.extra"))
 
                     // Current Balance (top, prominent)
                     if let pp = store.prepaid {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Current Balance")
+                                Text(store.t("label.balance"))
                                     .font(.system(size: 10, weight: .medium))
                                     .foregroundColor(.secondary)
                                 Text(pp.formatted)
@@ -486,7 +554,7 @@ struct WidgetContentView: View {
                             Text(String(format: "%@%.2f", curSym, store.extra.usedCredits / 100.0))
                                 .font(.system(size: 18, weight: .bold, design: .rounded))
                                 .foregroundColor(store.extra.usedCredits > 0 ? .orange : .primary.opacity(0.4))
-                            Text("Verbraucht")
+                            Text(store.t("label.used"))
                                 .font(.system(size: 10, weight: .medium))
                                 .foregroundColor(.secondary)
                         }
@@ -498,7 +566,7 @@ struct WidgetContentView: View {
                             Text(String(format: "%@%.0f", curSym, Double(store.extra.monthlyLimit) / 100.0))
                                 .font(.system(size: 18, weight: .bold, design: .rounded))
                                 .foregroundColor(.primary.opacity(0.5))
-                            Text("Monatslimit")
+                            Text(store.t("label.monthly_limit"))
                                 .font(.system(size: 10, weight: .medium))
                                 .foregroundColor(.secondary)
                         }
@@ -513,7 +581,7 @@ struct WidgetContentView: View {
                 HStack {
                     Spacer()
                     if let updated = store.lastUpdated {
-                        Text("Aktualisiert: ")
+                        Text(store.t("label.updated"))
                             .font(.system(size: 10))
                             .foregroundColor(.secondary.opacity(0.4))
                         +
@@ -587,14 +655,14 @@ struct PopoverView: View {
             WidgetContentView(store: store)
             Divider().padding(.horizontal, 14)
             VStack(spacing: 2) {
-                popButton(icon: "arrow.clockwise", label: "Aktualisieren", action: onRefresh)
+                popButton(icon: "arrow.clockwise", label: store.t("action.refresh"), action: onRefresh)
                 popButton(icon: widgetVisible ? "eye.slash" : "eye",
-                    label: widgetVisible ? "Desktop-Widget ausblenden" : "Desktop-Widget einblenden") {
+                    label: widgetVisible ? store.t("action.hide_widget") : store.t("action.show_widget")) {
                     widgetVisible.toggle(); onToggleWidget()
                 }
-                popButton(icon: "gearshape", label: "Einstellungen...", action: onSettings)
+                popButton(icon: "gearshape", label: store.t("action.settings"), action: onSettings)
                 Divider().padding(.horizontal, 14)
-                popButton(icon: "xmark.circle", label: "Beenden", action: onQuit)
+                popButton(icon: "xmark.circle", label: store.t("action.quit"), action: onQuit)
             }
             .padding(.vertical, 6)
         }
@@ -616,10 +684,10 @@ struct PopoverView: View {
 
 // MARK: - Settings
 
-func installEditMenu() {
+func installEditMenu(store: UsageStore) {
     let mainMenu = NSMenu()
     let appItem = NSMenuItem(); let appMenu = NSMenu()
-    appMenu.addItem(withTitle: "Beenden", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+    appMenu.addItem(withTitle: store.t("action.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
     appItem.submenu = appMenu; mainMenu.addItem(appItem)
     let editItem = NSMenuItem(); let editMenu = NSMenu(title: "Edit")
     editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
@@ -634,23 +702,24 @@ func installEditMenu() {
 class SettingsWindowController {
     var window: NSWindow?
     var config: AppConfig
+    let store: UsageStore
     let onSave: (AppConfig) -> Void
 
-    init(config: AppConfig, onSave: @escaping (AppConfig) -> Void) {
-        self.config = config; self.onSave = onSave
+    init(config: AppConfig, store: UsageStore, onSave: @escaping (AppConfig) -> Void) {
+        self.config = config; self.store = store; self.onSave = onSave
     }
 
     func show() {
-        installEditMenu()
+        installEditMenu(store: store)
         if let w = window { w.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); return }
 
-        let view = SettingsView(config: config) { [weak self] c in
+        let view = SettingsView(config: config, store: store) { [weak self] c in
             self?.onSave(c); self?.window?.close(); self?.window = nil
         }
         let w = NSWindow(contentViewController: NSHostingController(rootView: view))
-        w.title = "Claude Usage - Einstellungen"
+        w.title = store.t("settings.window_title")
         w.styleMask = [.titled, .closable]
-        w.setContentSize(NSSize(width: 460, height: 360))
+        w.setContentSize(NSSize(width: 460, height: 420))
         w.center()
         w.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -659,37 +728,57 @@ class SettingsWindowController {
 }
 
 struct SettingsView: View {
+    @ObservedObject var store: UsageStore
     @State var refreshMinutes: Double
     @State var warningPercent: Double
     @State var autoStart: Bool
     @State var autoStartError: String?
+    @State var language: Lang
     let onSave: (AppConfig) -> Void
 
-    init(config: AppConfig, onSave: @escaping (AppConfig) -> Void) {
+    init(config: AppConfig, store: UsageStore, onSave: @escaping (AppConfig) -> Void) {
+        self.store = store
         _refreshMinutes = State(initialValue: config.refreshInterval / 60.0)
         _warningPercent = State(initialValue: Double(config.warningPercent))
         _autoStart = State(initialValue: LoginItem.isEnabled)
+        _language = State(initialValue: Lang(rawValue: config.language) ?? .en)
         self.onSave = onSave
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            Text("Einstellungen")
+        VStack(alignment: .leading, spacing: 20) {
+            Text(store.t("settings.title"))
                 .font(.system(size: 18, weight: .semibold))
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Aktualisierungs-Intervall")
+                Text(store.t("settings.language"))
                     .font(.system(size: 14, weight: .medium))
-                HStack(spacing: 12) {
-                    Slider(value: $refreshMinutes, in: 1...15, step: 1)
-                    Text("\(Int(refreshMinutes)) Min")
-                        .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                        .frame(width: 60, alignment: .trailing)
+                Picker("", selection: $language) {
+                    ForEach(Lang.allCases) { lang in
+                        Text(lang.displayName).tag(lang)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .onChange(of: language) { _, newLang in
+                    // Live preview so labels in this window update immediately.
+                    store.language = newLang
                 }
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Warnung ab")
+                Text(store.t("settings.interval"))
+                    .font(.system(size: 14, weight: .medium))
+                HStack(spacing: 12) {
+                    Slider(value: $refreshMinutes, in: 1...15, step: 1)
+                    Text("\(Int(refreshMinutes)) \(store.t("settings.min"))")
+                        .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                        .frame(width: 70, alignment: .trailing)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(store.t("settings.warn"))
                     .font(.system(size: 14, weight: .medium))
                 HStack(spacing: 12) {
                     Slider(value: $warningPercent, in: 50...95, step: 5)
@@ -698,7 +787,7 @@ struct SettingsView: View {
                         .foregroundColor(warningPercent > 80 ? .red : .orange)
                         .frame(width: 60, alignment: .trailing)
                 }
-                Text("Balken werden rot wenn der Verbrauch diesen Wert ueberschreitet")
+                Text(store.t("settings.warn_hint"))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
@@ -706,9 +795,9 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Toggle(isOn: $autoStart) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Beim Login automatisch starten")
+                        Text(store.t("settings.autostart"))
                             .font(.system(size: 14, weight: .medium))
-                        Text("Claude Usage oeffnet sich bei jedem Systemstart")
+                        Text(store.t("settings.autostart_hint"))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
@@ -733,14 +822,15 @@ struct SettingsView: View {
             Spacer()
 
             HStack {
-                Text("Daten kommen automatisch aus Claude Desktop")
+                Text(store.t("settings.data_source"))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                 Spacer()
-                Button("Speichern") {
+                Button(store.t("settings.save")) {
                     var config = AppConfig.load()
                     config.refreshInterval = refreshMinutes * 60
                     config.warningPercent = Int(warningPercent)
+                    config.language = language.rawValue
                     config.save()
                     onSave(config)
                 }
@@ -851,8 +941,11 @@ class MenuBarController: NSObject, NSPopoverDelegate {
             case .success(let json): self?.store.update(from: json)
             case .failure(let error):
                 DispatchQueue.main.async {
-                    self?.store.isLoading = false
-                    self?.store.errorMessage = error.localizedDescription
+                    guard let self = self else { return }
+                    self.store.isLoading = false
+                    let raw = error.localizedDescription
+                    // Translate our own error keys; leave upstream (Python) strings as-is.
+                    self.store.errorMessage = L10n.strings[raw] != nil ? self.store.t(raw) : raw
                 }
             }
         }
@@ -861,7 +954,7 @@ class MenuBarController: NSObject, NSPopoverDelegate {
     func showSettings() {
         popover.performClose(nil)
         if settingsController == nil {
-            settingsController = SettingsWindowController(config: config) { [weak self] c in
+            settingsController = SettingsWindowController(config: config, store: store) { [weak self] c in
                 self?.config = c; self?.store.config = c; self?.startTimer()
             }
         }
@@ -926,6 +1019,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let config = AppConfig.load()
         let store = UsageStore()
         store.config = config
+        store.language = Lang(rawValue: config.language) ?? .en
         controller = MenuBarController(store: store, config: config)
         NSApp.setActivationPolicy(.accessory)
     }
