@@ -31,7 +31,7 @@ keychain (same auth path Claude Desktop itself uses).
 ### From DMG (recommended)
 
 1. Download `Claude Usage.dmg` from
-   [Releases](https://github.com/YOUR_USERNAME/claude-usage-widget/releases/latest)
+   [Releases](https://github.com/Idefixart/claude-usage-widget/releases/latest)
 2. Open the DMG, drag **Claude Usage** into `Applications`
 3. First launch: right-click the app → **Open** → confirm the Gatekeeper
    dialog (the app is ad-hoc signed, not notarized)
@@ -50,7 +50,7 @@ On first fetch, the Python script auto-installs two small dependencies
 ### Build from source
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/claude-usage-widget.git
+git clone https://github.com/Idefixart/claude-usage-widget.git
 cd claude-usage-widget
 ./build.sh
 open "build/Claude Usage.app"
