@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+*.swp
+
+# Build artifacts
+build/
+*.dSYM/
+AppIcon.iconset/
+
+# IDE
+.vscode/
+.idea/
+*.xcworkspace/
+*.xcuserdata/
+
+# Config (user-specific, runtime-generated)
+config.json
