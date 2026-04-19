@@ -15,3 +15,8 @@ AppIcon.iconset/
 
 # Config (user-specific, runtime-generated)
 config.json
+
+# Design binary sources (metadata may contain personal name). PNG master is enough.
+*.ai
+*.sketch
+
