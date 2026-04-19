@@ -9,7 +9,6 @@ keychain (same auth path Claude Desktop itself uses).
 
 <p>
   <img width="345" alt="Menu bar popover" src="https://github.com/user-attachments/assets/cfa3b85f-a838-4f8a-9757-0936399e9549" />
-  <img width="345" alt="Desktop widget" src="docs/widget-popover.png" />
 </p>
 
 ## Features
