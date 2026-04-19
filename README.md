@@ -7,8 +7,7 @@ subscription usage in real time — 5-hour session, weekly limits, Sonnet, Opus,
 No API key required. Reads your existing Claude Desktop session from the local
 keychain (same auth path Claude Desktop itself uses).
 
-
-
+<img width="345" height="783" alt="Bildschirmfoto 2026-04-19 um 02 55 51" src="https://github.com/user-attachments/assets/cfa3b85f-a838-4f8a-9757-0936399e9549" />
 
 ## Features
 
